@@ -1,0 +1,10 @@
+[package]
+name = "lifegate"
+version = "0.1.0"
+authors = ["Stephen Wassell <steve@nerv.org.uk>"]
+
+[dependencies]
+gate = "*"
+
+[build-dependencies]
+gate_build = "*"
