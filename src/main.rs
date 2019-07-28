@@ -71,7 +71,8 @@ struct LifeGame {
 	time: f64,
 	centre: Cell,
 	saved_col: Colony,
-	saved_centre: Cell
+	saved_centre: Cell,
+	zoomed_out: bool
 }
 
 impl LifeGame {
@@ -82,7 +83,8 @@ impl LifeGame {
 			time: 0.,
 			centre: (0, 0),
 			saved_col: Colony::new(),
-			saved_centre: (0, 0)
+			saved_centre: (0, 0),
+			zoomed_out: false
 		}
 	}
 
@@ -101,6 +103,10 @@ impl LifeGame {
 		self.col = self.saved_col.clone();
 		self.centre = self.saved_centre;
 		self.fps = 0.;
+	}
+	
+	fn zoom(&mut self) {
+		self.zoomed_out = !self.zoomed_out;
 	}
 }
 
@@ -151,11 +157,13 @@ impl App<AssetId> for LifeGame {
             for y in 0..((app_height / 16.).ceil() as i32) {
             	// use self.centre
                 let affine = Affine::translate(8. + x as f64 * 16., 8. + y as f64 * 16.);
-                let tile = if self.col.contains(&(x, y))
-					{ SpriteId::ItemsR5C1 }
-				else
-					{ SpriteId::ItemsR5C2 };
-                renderer.draw(&affine, tile);
+                
+				let tile = if (x + y) % 2 == 0 { SpriteId::BgTileR0C0 } else { SpriteId::BgTileR0C1 };
+				renderer.draw(&affine, tile);
+				
+				if self.col.contains(&(x, y)) {
+					renderer.draw(&affine, SpriteId::ItemsR5C1);
+				}
             }
         }
     }
