@@ -43,12 +43,6 @@ fn generation(col: &Colony) -> Colony {
         .collect()
 }
 
-fn cursor_to_cell(pos: (f64, f64)) -> Cell {
-	let x = (pos.0 / 16.) as i32;
-	let y = (pos.1 / 16.) as i32;
-	(x, y)
-}
-
 fn toggle(col: &mut Colony, cell: Cell) {
 	if col.contains(&cell) {
 		col.remove(&cell);
@@ -72,7 +66,8 @@ struct LifeGame {
 	centre: Cell,
 	saved_col: Colony,
 	saved_centre: Cell,
-	zoomed_out: bool
+	zoomed_out: bool,
+	zoom_level: f64
 }
 
 impl LifeGame {
@@ -84,7 +79,8 @@ impl LifeGame {
 			centre: (0, 0),
 			saved_col: Colony::new(),
 			saved_centre: (0, 0),
-			zoomed_out: false
+			zoomed_out: false,
+			zoom_level: 1.
 		}
 	}
 
@@ -108,6 +104,12 @@ impl LifeGame {
 	fn zoom(&mut self) {
 		self.zoomed_out = !self.zoomed_out;
 	}
+	
+	fn cursor_to_cell(&self, pos: (f64, f64)) -> Cell {
+		let x = (pos.0 * self.zoom_level / 16.) as i32;
+		let y = (pos.1 * self.zoom_level / 16.) as i32;
+		(x, y)
+	}
 }
 
 impl App<AssetId> for LifeGame {
@@ -116,15 +118,18 @@ impl App<AssetId> for LifeGame {
     //}
 
     fn advance(&mut self, seconds: f64, _ctx: &mut AppContext<AssetId>) {
-        //if let Some(held) = self.held.as_mut() {
-        //    held.pos.1 = (held.pos.1 + seconds * 200.).min(35.);
-        //}
         if self.fps > 0. {
 			self.time += seconds;
 			if self.time >= 1./self.fps {
 				self.time = 0.; //-= 1./self.fps;
 				self.col = generation(&self.col);
 			}
+		}
+		
+		self.zoom_level = if self.zoomed_out {
+			(self.zoom_level + seconds*100.).min(8.)
+		} else {
+			(self.zoom_level - seconds*100.).max(1.)
 		}
 	}
 
@@ -138,8 +143,8 @@ impl App<AssetId> for LifeGame {
             KeyCode::Num6 => self.fps = 15.,
             KeyCode::Num7 => self.zoom(),
             KeyCode::MouseLeft => {
-            	let cell = cursor_to_cell(ctx.cursor());
-				if self.fps > 0. {
+            	let cell = self.cursor_to_cell(ctx.cursor());
+				if self.fps > 0. || self.zoom_level > 1. {
 					self.centre = cell;
 				} else {
 					toggle(&mut self.col, cell);
@@ -153,19 +158,33 @@ impl App<AssetId> for LifeGame {
     fn render(&mut self, renderer: &mut Renderer<AssetId>, ctx: &AppContext<AssetId>) {
         let (app_width, app_height) = ctx.dims();
         let mut renderer = renderer.sprite_mode();
-        for x in 0..((app_width / 16.).ceil() as i32) {
-            for y in 0..((app_height / 16.).ceil() as i32) {
-            	// use self.centre
-                let affine = Affine::translate(8. + x as f64 * 16., 8. + y as f64 * 16.);
+        let w = (app_width * self.zoom_level / 16.).ceil() as i32;
+        let h = (app_height * self.zoom_level / 16.).ceil() as i32;
+        let half_w = w / 2;
+        let half_h = h / 2;
+        for x in 0..w {
+            for y in 0..h {
+				let affine = Affine::translate(
+						(8 + x * 16) as f64,
+						(8 + y * 16) as f64).
+					post_scale(1./self.zoom_level);
                 
-				let tile = if (x + y) % 2 == 0 { SpriteId::BgTileR0C0 } else { SpriteId::BgTileR0C1 };
+				let tile = if (x + y) % 2 == 0 {
+					SpriteId::BgTileR0C0
+				} else {
+					SpriteId::BgTileR0C1
+				};
 				renderer.draw(&affine, tile);
 				
-				if self.col.contains(&(x, y)) {
+				let xc = x; // + self.centre.0 - half_w;
+				let yc = y; // + self.centre.1 - half_h;
+				
+				if self.col.contains(&(xc, yc)) {
 					renderer.draw(&affine, SpriteId::ItemsR5C1);
 				}
             }
         }
+        // controls at 0,0
     }
 }
 
