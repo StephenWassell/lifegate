@@ -120,8 +120,8 @@ impl App<AssetId> for LifeGame {
     fn advance(&mut self, seconds: f64, _ctx: &mut AppContext<AssetId>) {
         if self.fps > 0. {
 			self.time += seconds;
-			if self.time >= 1./self.fps {
-				self.time = 0.; //-= 1./self.fps;
+			while self.time >= 1./self.fps {
+				self.time -= 1./self.fps;
 				self.col = generation(&self.col);
 			}
 		}
@@ -194,6 +194,7 @@ fn main() {
 	
     let info = AppInfo::with_max_dims(size_max, size_max)
                        .min_dims(size_min, size_min)
+                       .target_fps(30.)
                        .tile_width(16)
                        .title("Life");
 
