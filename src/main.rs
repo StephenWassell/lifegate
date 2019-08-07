@@ -43,6 +43,30 @@ fn generation(col: &Colony) -> Colony {
 		.collect()
 }
 
+fn cell_sprite(col: &Colony, &(x, y): &Cell) -> SpriteId {
+	match (col.contains(&(x, y+1)),
+			col.contains(&(x+1, y)),
+			col.contains(&(x, y-1)),
+			col.contains(&(x-1, y))) {
+		(false, false, false, false) => SpriteId::CellsR0C0,
+		(false, false, false, true) => SpriteId::CellsR0C3,
+		(false, false, true, false) => SpriteId::CellsR1C0,
+		(false, false, true, true) => SpriteId::CellsR1C3,
+		(false, true, false, false) => SpriteId::CellsR0C1,
+		(false, true, false, true) => SpriteId::CellsR0C2,
+		(false, true, true, false) => SpriteId::CellsR1C1,
+		(false, true, true, true) => SpriteId::CellsR1C2,
+		(true, false, false, false) => SpriteId::CellsR3C0,
+		(true, false, false, true) => SpriteId::CellsR3C3,
+		(true, false, true, false) => SpriteId::CellsR2C0,
+		(true, false, true, true) => SpriteId::CellsR2C3,
+		(true, true, false, false) => SpriteId::CellsR3C1,
+		(true, true, false, true) => SpriteId::CellsR3C2,
+		(true, true, true, false) => SpriteId::CellsR2C1,
+		(true, true, true, true) => SpriteId::CellsR2C2
+	}
+}
+
 fn toggle(col: &mut Colony, cell: Cell) {
 	if col.contains(&cell) {
 		col.remove(&cell);
@@ -182,7 +206,7 @@ impl App<AssetId> for LifeGame {
 				let yc = y; // + self.centre.1 - half_h;
 				
 				if self.col.contains(&(xc, yc)) {
-					renderer.draw(&affine, SpriteId::CellsR0C0);
+					renderer.draw(&affine, cell_sprite(&self.col, &(xc, yc)));
 				}
 			}
 		}
