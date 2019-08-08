@@ -1,3 +1,5 @@
+// (c) 2019 Stephen Wassell
+
 #[macro_use]
 extern crate gate;
 
@@ -43,11 +45,17 @@ fn generation(col: &Colony) -> Colony {
 		.collect()
 }
 
-fn cell_sprite(col: &Colony, &(x, y): &Cell) -> SpriteId {
-	match (col.contains(&(x, y+1)),
-			col.contains(&(x+1, y)),
-			col.contains(&(x, y-1)),
-			col.contains(&(x-1, y))) {
+fn neighbours_nesw(col: &Colony, &(x, y): &Cell) -> (bool, bool, bool, bool) {
+	(
+		col.contains(&(x, y+1)), // N
+		col.contains(&(x+1, y)), // E
+		col.contains(&(x, y-1)), // S
+		col.contains(&(x-1, y))  // W
+	)
+}
+
+fn cell_sprite(col: &Colony, cell: &Cell) -> SpriteId {
+	match neighbours_nesw(col, cell) {
 		(false, false, false, false) => SpriteId::CellsR0C0,
 		(false, false, false, true) => SpriteId::CellsR0C3,
 		(false, false, true, false) => SpriteId::CellsR1C0,
