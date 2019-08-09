@@ -75,6 +75,25 @@ fn cell_sprite(col: &Colony, cell: &Cell) -> SpriteId {
 	}
 }
 
+fn button_sprite(x: i32, down: bool) -> SpriteId {
+	match (x, down) {
+		(0, false) => SpriteId::ButtonsR0C0,
+		(1, false) => SpriteId::ButtonsR0C1,
+		(2, false) => SpriteId::ButtonsR0C2,
+		(3, false) => SpriteId::ButtonsR0C3,
+		(4, false) => SpriteId::ButtonsR0C4,
+		(5, false) => SpriteId::ButtonsR0C5,
+		(_, false) => SpriteId::ButtonsR0C6,
+		(0, true) => SpriteId::ButtonsR1C0,
+		(1, true) => SpriteId::ButtonsR1C1,
+		(2, true) => SpriteId::ButtonsR1C2,
+		(3, true) => SpriteId::ButtonsR1C3,
+		(4, true) => SpriteId::ButtonsR1C4,
+		(5, true) => SpriteId::ButtonsR1C5,
+		(_, true) => SpriteId::ButtonsR1C6,
+	}
+}
+
 fn toggle(col: &mut Colony, cell: Cell) {
 	if col.contains(&cell) {
 		col.remove(&cell);
@@ -178,7 +197,7 @@ impl LifeGame {
 			let affine = Affine::translate(
 					(8 + x * 16) as f64, 8.);
 
-			renderer.draw(&affine, SpriteId::ButtonsR0C0);
+			renderer.draw(&affine, button_sprite(x, false));
 		}
 	}
 }
