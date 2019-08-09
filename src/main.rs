@@ -4,7 +4,7 @@
 extern crate gate;
 
 use gate::{App, AppContext, AppInfo, KeyCode};
-use gate::renderer::{Renderer, Affine};
+use gate::renderer::{Renderer, Affine, SpriteRenderer};
 
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -142,6 +142,45 @@ impl LifeGame {
 		let y = (pos.1 * self.zoom_level / 16.) as i32;
 		(x, y)
 	}
+
+	fn draw_background(&mut self, renderer: &mut SpriteRenderer<AssetId>, w: i32, h: i32) {
+		for x in 0..=(w / 32) {
+			for y in 0..=(h / 32) {
+				let affine = Affine::translate(
+						(16 + x * 32) as f64,
+						(16 + y * 32) as f64).
+					post_scale(16./self.zoom_level);
+				renderer.draw(&affine, SpriteId::Checker32);
+			}
+		}
+	}	
+
+	fn draw_cells(&mut self, renderer: &mut SpriteRenderer<AssetId>, w: i32, h: i32) {
+		for x in 0..w {
+			for y in 0..h {
+				let affine = Affine::translate(
+						(8 + x * 16) as f64,
+						(8 + y * 16) as f64).
+					post_scale(1./self.zoom_level);
+				
+				let xc = x; // + self.centre.0 - half_w;
+				let yc = y; // + self.centre.1 - half_h;
+				
+				if self.col.contains(&(xc, yc)) {
+					renderer.draw(&affine, cell_sprite(&self.col, &(xc, yc)));
+				}
+			}
+		}
+	}
+
+	fn draw_buttons(&mut self, renderer: &mut SpriteRenderer<AssetId>) {
+		for x in 0..7 {
+			let affine = Affine::translate(
+					(8 + x * 16) as f64, 8.);
+
+			renderer.draw(&affine, SpriteId::ButtonsR0C0);
+		}
+	}
 }
 
 impl App<AssetId> for LifeGame {
@@ -167,13 +206,13 @@ impl App<AssetId> for LifeGame {
 
 	fn key_down(&mut self, key: KeyCode, ctx: &mut AppContext<AssetId>) {
 		match key {
-			KeyCode::Num1 => fullscreen(ctx),
-			KeyCode::Num2 => self.clear(),
-			KeyCode::Num3 => self.rewind(),
-			KeyCode::Num4 => self.fps = 0.,
-			KeyCode::Num5 => self.fps = 3.,
-			KeyCode::Num6 => self.fps = 15.,
-			KeyCode::Num7 => self.zoom(),
+			KeyCode::Num1 => fullscreen(ctx), // []
+			KeyCode::Num2 => self.clear(),    // X
+			KeyCode::Num3 => self.rewind(),   // <<
+			KeyCode::Num4 => self.fps = 0.,   // ||
+			KeyCode::Num5 => self.fps = 3.,   // >
+			KeyCode::Num6 => self.fps = 15.,  // >>
+			KeyCode::Num7 => self.zoom(),     // +
 			KeyCode::MouseLeft => {
 				let cell = self.cursor_to_cell(ctx.cursor());
 				if self.fps > 0. || self.zoom_level > 1. {
@@ -186,39 +225,17 @@ impl App<AssetId> for LifeGame {
 			_ => (),
 		};
 	}
-
+	
 	fn render(&mut self, renderer: &mut Renderer<AssetId>, ctx: &AppContext<AssetId>) {
 		let (app_width, app_height) = ctx.dims();
 		let mut renderer = renderer.sprite_mode();
 		let w = (app_width * self.zoom_level / 16.).ceil() as i32;
 		let h = (app_height * self.zoom_level / 16.).ceil() as i32;
-		let half_w = w / 2;
-		let half_h = h / 2;
-		for x in 0..=(w / 32) {
-			for y in 0..=(h / 32) {
-				let affine = Affine::translate(
-						(16 + x * 32) as f64,
-						(16 + y * 32) as f64).
-					post_scale(16./self.zoom_level);
-				renderer.draw(&affine, SpriteId::Checker32);
-			}
-		}
-		for x in 0..w {
-			for y in 0..h {
-				let affine = Affine::translate(
-						(8 + x * 16) as f64,
-						(8 + y * 16) as f64).
-					post_scale(1./self.zoom_level);
-				
-				let xc = x; // + self.centre.0 - half_w;
-				let yc = y; // + self.centre.1 - half_h;
-				
-				if self.col.contains(&(xc, yc)) {
-					renderer.draw(&affine, cell_sprite(&self.col, &(xc, yc)));
-				}
-			}
-		}
-		// controls at 0,0
+		//let half_w = w / 2;
+		//let half_h = h / 2;
+		self.draw_background(&mut renderer, w, h);
+		self.draw_cells(&mut renderer, w, h);
+		self.draw_buttons(&mut renderer);
 	}
 }
 
