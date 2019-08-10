@@ -24,7 +24,7 @@ fn neighbours(&(x,y): &Cell) -> Vec<Cell> {
 		(x-1,y+1), (x,y+1), (x+1,y+1),
 	]
 }
- 
+
 fn neighbour_counts(col: &Colony) -> HashMap<Cell, i32> {
 	let mut ncnts = HashMap::new();
 	for cell in col.iter().flat_map(neighbours) {
@@ -32,7 +32,7 @@ fn neighbour_counts(col: &Colony) -> HashMap<Cell, i32> {
 	}
 	ncnts
 }
- 
+
 fn generation(col: &Colony) -> Colony {
 	neighbour_counts(col)
 		.into_iter()
@@ -110,9 +110,15 @@ fn fullscreen(ctx: &mut AppContext<AssetId>) {
 	}
 }
 
+enum Speed {
+    Pause,
+    Slow,
+    Fast
+}
+
 struct LifeGame {
 	col: Colony,
-	fps: f64,
+	speed: Speed,
 	time: f64,
 	centre: Cell,
 	saved_col: Colony,
@@ -125,7 +131,7 @@ impl LifeGame {
 	fn new() -> LifeGame {
 		LifeGame {
 			col: Colony::new(),
-			fps: 0.,
+			speed: Speed::Pause,
 			time: 0.,
 			centre: (0, 0),
 			saved_col: Colony::new(),
@@ -138,24 +144,24 @@ impl LifeGame {
 	fn clear(&mut self) {
 		self.col.clear();
 		self.centre = (0, 0);
-		self.fps = 0.;
+		self.speed = Speed::Pause;
 	}
-	
+
 	fn save(&mut self) {
 		self.saved_col = self.col.clone();
 		self.saved_centre = self.centre;
 	}
-	
+
 	fn rewind(&mut self) {
 		self.col = self.saved_col.clone();
 		self.centre = self.saved_centre;
-		self.fps = 0.;
+		self.speed = Speed::Pause;
 	}
-	
+
 	fn zoom(&mut self) {
 		self.zoomed_out = !self.zoomed_out;
 	}
-	
+
 	fn cursor_to_cell(&self, pos: (f64, f64)) -> Cell {
 		let x = (pos.0 * self.zoom_level / 16.) as i32;
 		let y = (pos.1 * self.zoom_level / 16.) as i32;
@@ -172,7 +178,7 @@ impl LifeGame {
 				renderer.draw(&affine, SpriteId::Checker32);
 			}
 		}
-	}	
+	}
 
 	fn draw_cells(&mut self, renderer: &mut SpriteRenderer<AssetId>, w: i32, h: i32) {
 		for x in 0..w {
@@ -181,10 +187,10 @@ impl LifeGame {
 						(8 + x * 16) as f64,
 						(8 + y * 16) as f64).
 					post_scale(1./self.zoom_level);
-				
+
 				let xc = x; // + self.centre.0 - half_w;
 				let yc = y; // + self.centre.1 - half_h;
-				
+
 				if self.col.contains(&(xc, yc)) {
 					renderer.draw(&affine, cell_sprite(&self.col, &(xc, yc)));
 				}
@@ -200,6 +206,22 @@ impl LifeGame {
 			renderer.draw(&affine, button_sprite(x, false));
 		}
 	}
+
+    fn running(&mut self) -> bool {
+        match self.speed {
+            Speed::Pause => false,
+            _ => true
+        }
+    }
+
+    fn step(&mut self) -> f64 {
+        let fps = match self.speed {
+            Speed::Slow => 3.,
+            Speed::Fast => 15.,
+            _ => 0.,
+        };
+        1./fps
+    }
 }
 
 impl App<AssetId> for LifeGame {
@@ -208,14 +230,14 @@ impl App<AssetId> for LifeGame {
 	//}
 
 	fn advance(&mut self, seconds: f64, _ctx: &mut AppContext<AssetId>) {
-		if self.fps > 0. {
-			self.time += seconds;
-			while self.time >= 1./self.fps {
-				self.time -= 1./self.fps;
-				self.col = generation(&self.col);
-			}
+        if self.running() {
+            self.time += seconds;
+            while self.time >= self.step() {
+                self.time -= self.step();
+                self.col = generation(&self.col);
+            }
 		}
-		
+
 		self.zoom_level = if self.zoomed_out {
 			(self.zoom_level + seconds*100.).min(8.)
 		} else {
@@ -228,13 +250,13 @@ impl App<AssetId> for LifeGame {
 			KeyCode::Num1 => fullscreen(ctx), // []
 			KeyCode::Num2 => self.clear(),    // X
 			KeyCode::Num3 => self.rewind(),   // <<
-			KeyCode::Num4 => self.fps = 0.,   // ||
-			KeyCode::Num5 => self.fps = 3.,   // >
-			KeyCode::Num6 => self.fps = 15.,  // >>
+			KeyCode::Num4 => self.speed = Speed::Pause,   // ||
+			KeyCode::Num5 => self.speed = Speed::Slow,   // >
+			KeyCode::Num6 => self.speed = Speed::Fast,  // >>
 			KeyCode::Num7 => self.zoom(),     // +
 			KeyCode::MouseLeft => {
 				let cell = self.cursor_to_cell(ctx.cursor());
-				if self.fps > 0. || self.zoom_level > 1. {
+				if self.running() || self.zoom_level > 1. {
 					self.centre = cell;
 				} else {
 					toggle(&mut self.col, cell);
@@ -244,7 +266,7 @@ impl App<AssetId> for LifeGame {
 			_ => (),
 		};
 	}
-	
+
 	fn render(&mut self, renderer: &mut Renderer<AssetId>, ctx: &AppContext<AssetId>) {
 		let (app_width, app_height) = ctx.dims();
 		let mut renderer = renderer.sprite_mode();
@@ -261,7 +283,7 @@ impl App<AssetId> for LifeGame {
 fn main() {
 	let size_min = 8. * 16.;
 	let size_max = 16. * 16.;
-	
+
 	let info = AppInfo::with_max_dims(size_max, size_max)
 					   .min_dims(size_min, size_min)
 					   .target_fps(30.)
