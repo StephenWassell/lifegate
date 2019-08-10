@@ -163,9 +163,10 @@ impl LifeGame {
 	}
 
 	fn cursor_to_cell(&self, pos: (f64, f64)) -> Cell {
-		let x = (pos.0 * self.zoom_level / 16.) as i32;
-		let y = (pos.1 * self.zoom_level / 16.) as i32;
-		(x, y)
+		//let x = (pos.0 * self.zoom_level / 16.) as i32;
+		//let y = (pos.1 * self.zoom_level / 16.) as i32;
+		//(x, y)
+        ((pos.0 / 16.) as i32, (pos.1 / 16.) as i32)
 	}
 
 	fn draw_background(&mut self, renderer: &mut SpriteRenderer<AssetId>, w: i32, h: i32) {
@@ -250,18 +251,27 @@ impl App<AssetId> for LifeGame {
 			KeyCode::Num1 => fullscreen(ctx), // []
 			KeyCode::Num2 => self.clear(),    // X
 			KeyCode::Num3 => self.rewind(),   // <<
-			KeyCode::Num4 => self.speed = Speed::Pause,   // ||
-			KeyCode::Num5 => self.speed = Speed::Slow,   // >
+			KeyCode::Num4 => self.speed = Speed::Pause, // ||
+			KeyCode::Num5 => self.speed = Speed::Slow,  // >
 			KeyCode::Num6 => self.speed = Speed::Fast,  // >>
 			KeyCode::Num7 => self.zoom(),     // +
 			KeyCode::MouseLeft => {
 				let cell = self.cursor_to_cell(ctx.cursor());
-				if self.running() || self.zoom_level > 1. {
-					self.centre = cell;
-				} else {
-					toggle(&mut self.col, cell);
-					self.save();
-				}
+                match cell {
+                    (0,0) => fullscreen(ctx), // []
+                    (1,0) => self.clear(),    // X
+                    (2,0) => self.rewind(),   // <<
+                    (3,0) => self.speed = Speed::Pause, // ||
+			        (4,0) => self.speed = Speed::Slow,  // >
+			        (5,0) => self.speed = Speed::Fast,  // >>
+			        (6,0) => self.zoom(),     // +
+                    _ => if self.running() || self.zoom_level > 1. {
+			    		self.centre = cell;
+				    } else {
+					    toggle(&mut self.col, cell);
+					    self.save();
+				    }
+                }
 			},
 			_ => (),
 		};
