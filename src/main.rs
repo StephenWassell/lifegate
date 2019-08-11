@@ -184,15 +184,15 @@ impl LifeGame {
 	fn draw_cells(&mut self, renderer: &mut SpriteRenderer<AssetId>, w: i32, h: i32) {
 		for x in 0..w {
 			for y in 0..h {
-				let affine = Affine::translate(
-						(8 + x * 16) as f64,
-						(8 + y * 16) as f64).
-					post_scale(1./self.zoom_level);
-
-				let xc = x; // + self.centre.0 - half_w;
-				let yc = y; // + self.centre.1 - half_h;
+				let xc = x - w/2; // + self.centre.0 - half_w;
+				let yc = y - h/2; // + self.centre.1 - half_h;
 
 				if self.col.contains(&(xc, yc)) {
+                    let affine = Affine::translate(
+                            (8 + x * 16) as f64,
+                            (8 + y * 16) as f64).
+                        post_scale(1./self.zoom_level);
+
 					renderer.draw(&affine, cell_sprite(&self.col, &(xc, yc)));
 				}
 			}
@@ -223,6 +223,13 @@ impl LifeGame {
         };
         1./fps
     }
+
+    fn scaled_dims(&mut self, ctx: &AppContext<AssetId>) -> Cell {
+		let (app_width, app_height) = ctx.dims();
+		let w = (app_width * self.zoom_level / 16.).ceil() as i32;
+		let h = (app_height * self.zoom_level / 16.).ceil() as i32;
+        (w, h)
+    }
 }
 
 impl App<AssetId> for LifeGame {
@@ -240,9 +247,9 @@ impl App<AssetId> for LifeGame {
 		}
 
 		self.zoom_level = if self.zoomed_out {
-			(self.zoom_level + seconds*100.).min(8.)
+			(self.zoom_level + seconds*60.).min(10.)
 		} else {
-			(self.zoom_level - seconds*100.).max(1.)
+			(self.zoom_level - seconds*60.).max(1.)
 		}
 	}
 
@@ -268,7 +275,8 @@ impl App<AssetId> for LifeGame {
                     _ => if self.running() || self.zoom_level > 1. {
 			    		self.centre = cell;
 				    } else {
-					    toggle(&mut self.col, cell);
+                        let (w, h) = self.scaled_dims(ctx);
+					    toggle(&mut self.col, (cell.0 - w/2, cell.1 - h/2));
 					    self.save();
 				    }
                 }
@@ -278,12 +286,10 @@ impl App<AssetId> for LifeGame {
 	}
 
 	fn render(&mut self, renderer: &mut Renderer<AssetId>, ctx: &AppContext<AssetId>) {
-		let (app_width, app_height) = ctx.dims();
 		let mut renderer = renderer.sprite_mode();
-		let w = (app_width * self.zoom_level / 16.).ceil() as i32;
-		let h = (app_height * self.zoom_level / 16.).ceil() as i32;
-		//let half_w = w / 2;
-		//let half_h = h / 2;
+
+        let (w,h) = self.scaled_dims(&ctx);
+
 		self.draw_background(&mut renderer, w, h);
 		self.draw_cells(&mut renderer, w, h);
 		self.draw_buttons(&mut renderer);
